@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyeso"
+version = "0.1.0"
+description = "Static analysis & linting for Elder Scrolls Online addon LUA — catch broken API calls, wrong param counts, and deprecated functions before your addon ever runs in-game."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [{ name = "mojabed" }]
+keywords = [
+    "eso",
+    "elder-scrolls-online",
+    "esoui",
+    "addon",
+    "linter",
+    "static-analysis",
+    "lua",
+    "gaming",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Lua",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Games/Entertainment",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Software Development :: Libraries :: Lua Modules",
+]
+dependencies = [
+    "luaparser>=3.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7", "pytest-cov", "ruff"]
+
+# PyInstaller needs to be installed separately for building the .exe
+exe = ["pyinstaller>=6"]
+
+[project.scripts]
+pyeso = "pyeso.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["pyeso*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
