@@ -1,12 +1,10 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 a = Analysis(
-    ["pyeso/__main__.py"],
+    ["pyeso/cli.py"],
     pathex=[],
     binaries=[],
-    datas=[
-        ("esoui/esoui", "esoui/esoui"),
-    ],
+    datas=[],
     hiddenimports=[
         "luaparser",
         "luaparser.astnodes",

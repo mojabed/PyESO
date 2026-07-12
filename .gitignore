@@ -28,6 +28,10 @@ htmlcov/
 .vscode/
 .idea/
 
+# pyeso output
+pyeso_report.txt
+
 # OS
 Thumbs.db
 .DS_Store
+tests/

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "pyeso"
 version = "0.1.0"
-description = "Static analysis & linting for Elder Scrolls Online addon LUA — catch broken API calls, wrong param counts, and deprecated functions before your addon ever runs in-game."
+description = "Static analysis & linting for Elder Scrolls Online addon Lua — catch broken API calls, wrong param counts, deprecated functions, and global leaks before your addon ever runs in-game."
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.10"
@@ -42,11 +42,8 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=7", "pytest-cov", "ruff"]
 
-# PyInstaller needs to be installed separately for building the .exe
-exe = ["pyinstaller>=6"]
-
 [project.scripts]
-pyeso = "pyeso.cli:main"
+pyeso = "pyeso.__main__:main"
 
 [tool.setuptools.packages.find]
 include = ["pyeso*"]

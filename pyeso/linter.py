@@ -1,42 +1,73 @@
-"""Main linter orchestrator ties together parsing, API database, and rules."""
+"""Main linter orchestrator — ties together parsing, registry, and rules."""
 
 from __future__ import annotations
 
 import pathlib
 from typing import Optional
 
-from pyeso.api.db import APIDatabase
-from pyeso.api.extractor import ESOUIExtractor
-from pyeso.parser.lua_visitor import LuaCallVisitor, collect_calls
-from pyeso.rules.base import Diagnostic
-from pyeso.rules.unknown_api import UnknownAPIRule
-from pyeso.rules.param_count import ParamCountRule
+from pyeso.loader import Loader
+from pyeso.parser.lua_visitor import collect_calls
+from pyeso.registry import Registry
+from pyeso.rules.base import Diagnostic, Severity
 from pyeso.rules.deprecated import DeprecatedAPIRule
+from pyeso.rules.deprecated_constants import DeprecatedConstantRule
+from pyeso.rules.event_validation import EventValidationRule
+from pyeso.rules.global_leak import GlobalLeakRule
+from pyeso.rules.method_validation import MethodValidationRule
+from pyeso.rules.param_count import ParamCountRule
+from pyeso.rules.string_localization import StringLocalizationRule
+from pyeso.rules.unknown_api import UnknownAPIRule
+
+
+def _find_bundled_esoui() -> Optional[pathlib.Path]:
+    this_file = pathlib.Path(__file__).resolve()
+    repo_root = this_file.parent.parent
+    candidate = repo_root / "esoui" / "esoui"
+
+    if candidate.is_dir() and list(candidate.rglob("*.lua")):
+        return candidate
+
+    return None
 
 
 class ESOLinter:
-    def __init__(self, esoui_source_dir: Optional[str | pathlib.Path] = None) -> None:
-        """Initialize the linter.
+    def __init__(self) -> None:
+        loader = Loader()
+        bundled = _find_bundled_esoui()
 
-        If esoui_source_dir is given, extracts API definitions from the
-        ESOUI source. Otherwise uses the built-in seed database.
-        """
-        self._extractor = ESOUIExtractor()
+        if not bundled:
+            import sys as _sys
+            print(
+                "\n  ERROR: ESOUI API source not found.\n"
+                "  PyESO requires the full ESOUI API surface for accurate linting.\n"
+                "  Run:\n\n"
+                "      git submodule update --init --recursive\n",
+                file=_sys.stderr,
+            )
+            _sys.exit(1)
 
-        if esoui_source_dir:
-            self._db = self._extractor.extract_from_directory(esoui_source_dir)
-        else:
-            self._db = self._extractor.build_default_database()
+        # The ESOUIDocumentation.txt is in the parent directory of the Lua source
+        esoui_root = bundled.parent  # esoui/esoui/ -> esoui/
+        self._registry = loader.load_from_esoui(esoui_root)
 
         self._rules = [
             UnknownAPIRule(),
             ParamCountRule(),
             DeprecatedAPIRule(),
+            GlobalLeakRule(),
+            DeprecatedConstantRule(),
+            StringLocalizationRule(),
+            EventValidationRule(),
+            MethodValidationRule(),
         ]
 
     @property
-    def db(self) -> APIDatabase:
-        return self._db
+    def db(self) -> Registry:
+        return self._registry
+
+    @property
+    def registry(self) -> Registry:
+        return self._registry
 
     def lint_file(self, filepath: pathlib.Path | str) -> list[Diagnostic]:
         """Lint a single LUA file."""
@@ -44,7 +75,7 @@ class ESOLinter:
         diagnostics: list[Diagnostic] = []
 
         for rule in self._rules:
-            diagnostics.extend(rule.check(visitor, self._db))
+            diagnostics.extend(rule.check(visitor, self._registry))
 
         return diagnostics
 
@@ -71,9 +102,8 @@ class ESOLinter:
             elif path.is_file():
                 all_diagnostics.extend(self.lint_file(path))
             else:
-                # Could be a glob pattern or missing path
                 all_diagnostics.append(Diagnostic(
-                    severity="warning",
+                    severity=Severity.WARNING,
                     message=f"Path not found: {p}",
                     file=p,
                     line=0,

@@ -1,6 +1,6 @@
 """Rule: detect calls to unknown/non-existent API functions."""
 
-from pyeso.api.db import APIDatabase
+from pyeso.registry import Registry
 from pyeso.parser.lua_visitor import LuaCallVisitor
 from pyeso.rules.base import Diagnostic, LintRule, Severity
 
@@ -11,7 +11,7 @@ class UnknownAPIRule(LintRule):
     code = "E001"
     description = "Call to unknown API function"
 
-    def check(self, visitor: LuaCallVisitor, db: APIDatabase) -> list[Diagnostic]:
+    def check(self, visitor: LuaCallVisitor, db: Registry) -> list[Diagnostic]:
         diagnostics = []
 
         for call in visitor.function_calls:

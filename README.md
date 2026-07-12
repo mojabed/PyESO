@@ -1,88 +1,92 @@
-# PyESO - ESO Addon Linter
+# PyESO — ESO Addon Linter
 
-A Python-based static analysis and linting tool for **Elder Scrolls Online** addon developers.  
-Checks your addon's LUA code against the known ESOUI API surface to catch issues **before** the
-addon ever runs in-game.
-
-## Features
-
-- **Unknown API Detection** — Flags calls to functions not in the ESOUI API surface (typos, missing imports).
-- **Parameter Count Checking** — Warns when an API function is called with the wrong number of arguments.
-- **Deprecated API Detection** — Identifies usage of renamed or removed ESOUI APIs and suggests replacements.
-- **ESOUI Source Extraction** — Optionally point at a local clone of the [ESOUI source](https://github.com/esoui/esoui) to build a richer API database.
+Lint your Elder Scrolls Online addon Lua code before it ever runs in-game. Catches typos, wrong argument counts, deprecated APIs, global variable leaks, and hardcoded strings.
 
 ## Installation
 
+### Option 1: Download the EXE (no Python needed)
+
+Download `pyeso.exe` from [releases](https://github.com/mojabed/PyESO/releases) and run from terminal
+
 ```bash
+pyeso MyAddon.lua
+pyeso MyAddon/
+```
+
+### Option 2: From source (requires Python 3.10+)
+
+```bash
+git clone --recurse-submodules https://github.com/mojabed/PyESO.git
+cd PyESO
 pip install -e .
 ```
 
-Requires Python 3.10+. The only dependency is `luaparser` for LUA AST parsing.
-Optional EXE provided.
-
-## Usage
-
-### Quick Start
+Then:
 
 ```bash
-# Lint a single addon file
-pyeso path/to/MyAddon.lua
-
-# Lint an entire addon directory (recursive)
-pyeso path/to/MyAddon/
-
-# Lint multiple paths
-pyeso MyAddon/ MyOtherAddon/Utils.lua
+pyeso MyAddon.lua
+# or
+python -m pyeso MyAddon/
 ```
 
-### With ESOUI Source
+## What it checks
 
-If you have a local clone of the ESOUI source, you can use it to build a richer API database:
+| Code | What |
+|------|------|
+| E001 | Unknown function — typo or missing import |
+| E002 | Unknown event — `RegisterForEvent` with non-existent event |
+| W001 | Wrong number of arguments |
+| W002 | Deprecated function call |
+| W003 | Global variable leak — missing `local` |
+| W005 | Deprecated constant reference |
+| W006 | Unknown object method — method not found in ESOUI Object API |
+| I001 | Hardcoded string — should use `GetString()` |
+
+## Requirements
+
+PyESO requires the full ESOUI API source. Clone with submodules:
 
 ```bash
-git clone https://github.com/esoui/esoui.git
-pyeso --esoui ./esoui/esoui MyAddon/
+git clone --recurse-submodules https://github.com/mojabed/PyESO.git
 ```
 
-### Options
+## Example
 
-| Flag | Description |
-|------|-------------|
-| `--esoui PATH` | Path to ESOUI source directory for API extraction |
-| `--no-color` | Disable colored output |
-| `--stats` | Print API database statistics before linting |
-| `--version` | Show version |
-| `--help` | Show help |
+```bash
+$ pyeso MyAddon/
 
-## How It Works
+MyAddon/main.lua:7  [ERR] E001: Unknown function 'GetUniteName' ...
+MyAddon/main.lua:10 [WRN] W002: 'GetCurrentMoney' is deprecated ...
+MyAddon/main.lua:15 [WRN] W001: 'GetUnitName' expects at least 1 argument ...
+MyAddon/main.lua:20 [WRN] W003: 'MyGlobal' is assigned without 'local' ...
+MyAddon/main.lua:25 [WRN] W005: 'NAMEPLATE_CHOICE_OFF' is deprecated ...
+MyAddon/main.lua:30 [INF] I001: Hardcoded string may need localization ...
+MyAddon/main.lua:35 [ERR] E002: Unknown event 'EVENT_FAKE_THING' ...
+MyAddon/main.lua:40 [WRN] W006: Unknown method 'SetHiden' ...
 
-1. **API Database**: PyESO ships with a curated seed database of ~150+ ESOUI API functions, constants, and deprecated aliases. If you provide `--esoui`, it also parses ESOUI source `.lua` files to extract additional function definitions.
-
-2. **Parsing**: Your addon's `.lua` files are parsed into an AST using `luaparser`. The AST is walked to collect all function calls.
-
-3. **Linting**: Three rules are applied:
-   - **E001 (Unknown API)**: Each function call is checked against the known API surface. Calls to unknown identifiers are flagged.
-   - **W001 (Param Count)**: Function calls are compared against known signatures; mismatched argument counts are flagged.
-   - **W002 (Deprecated API)**: Deprecated function/variable names are flagged with their replacement.
-
-4. **Reporting**: Diagnostics are printed with file, line number, severity, and a descriptive message.
-
-## Example Output
-
-```
-MyAddon/MyAddon.lua:45 [WARNING] E001: Unknown function 'GetUniteName' - not found in ESOUI API surface. This may be a typo.
-MyAddon/MyAddon.lua:72 [WARNING] W002: 'GetCurrentMoney' is deprecated; use 'GetCurrencyAmount(CURT_MONEY, CURRENCY_LOCATION_CHARACTER)' instead.
-MyAddon/Lib.lua:120 [WARNING] W001: 'GetUnitName' expects at least 1 argument(s), but 0 were provided.
-
-3 file(s) scanned, 3 warning(s)
+8 issue(s): 2 error(s), 4 warning(s), 2 info(s)
 ```
 
-## Extending the API Database
+## Python API
 
-The seed API database is in `pyeso/api/extractor.py` (`_SEED_API_FUNCTIONS`, `_SEED_DEPRECATED`, `_SEED_VARIABLES`). To add more APIs:
+```python
+from pyeso import ESOLinter
 
-1. Add entries to the appropriate seed list
-2. Or point `--esoui` at an ESOUI source checkout for automatic extraction
+linter = ESOLinter()
+diags = linter.lint_file("MyAddon.lua")
+diags = linter.lint_directory("MyAddon/")
+
+for d in diags:
+    print(f"{d.file}:{d.line} [{d.code}] {d.message}")
+```
+
+## How it works
+
+The ESOUI source is parsed to build a registry of functions, events, UI class methods,
+constants, and deprecation mappings. The `ESOUIDocumentation.txt` canonical API reference
+provides typed signatures for C-side functions (Game API), UI control methods (Object API),
+and events. Additional Lua-level APIs and deprecations are extracted from the ESOUI Lua
+source. Your addon's Lua files are parsed into an AST and checked against this registry.
 
 ## License
 
