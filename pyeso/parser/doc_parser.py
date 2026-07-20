@@ -164,7 +164,12 @@ class DocParser:
 
     # Events 
     def _parse_event_line(self, line: str, reg: Registry) -> None:
-        """Parse an event definition line."""
+        """Parse an event definition line.
+
+        ESO Lua convention: every event callback receives eventId (integer)
+        as the first parameter, even though ESOUIDocumentation.txt doesn't
+        document it. We prepend it here to match actual ESO runtime behavior.
+        """
         m = self._EVENT_RE.match(line)
         if not m:
             return
@@ -172,8 +177,12 @@ class DocParser:
         event_name = m.group(1)
         params_str = m.group(2) if m.group(2) else ""
 
-        params = self._parse_typed_params(params_str)
-        min_params = sum(1 for p in params if not p.optional)
+        doc_params = self._parse_typed_params(params_str)
+
+        params = [Param(name="eventId", type_hint="integer", optional=False)]
+        params.extend(doc_params)
+
+        min_params = 1 + sum(1 for p in doc_params if not p.optional)
 
         ev = EventInfo(
             name=event_name,
