@@ -7,6 +7,7 @@ import pathlib
 import re
 
 from pyeso.api.builtins import (
+    ESO_GLOBALS,
     ESO_STRING_EXTENSIONS,
     ESO_ZO_WRAPPERS,
     LUA_BUILTIN_GLOBALS,
@@ -105,6 +106,8 @@ class Loader:
         for name in ESO_ZO_WRAPPERS:
             reg.add_name(name)
         for name in ESO_STRING_EXTENSIONS:
+            reg.add_name(name)
+        for name in ESO_GLOBALS:
             reg.add_name(name)
 
     def _extract_functions(self, reg: Registry, filepath: pathlib.Path) -> None:

@@ -42,19 +42,34 @@ class MethodValidationRule(LintRule):
                     expected_min = sig.min_params
                     user_args = arg_count - 1
 
+                    # Only flag when clearly wrong (0 args for 1+ required,
+                    # or fewer than half the minimum)
                     if user_args < expected_min:
-                        diagnostics.append(Diagnostic(
-                            severity=Severity.WARNING,
-                            message=(
-                                f"'{method}' expects at least {expected_min} "
-                                f"argument(s), but {user_args} were provided."
-                            ),
-                            file=source_path,
-                            line=line,
-                            code=self.code,
-                            source_line=name,
-                        ))
-                    elif not sig.has_varargs and user_args > len(sig.params):
+                        if user_args == 0 and expected_min >= 1:
+                            diagnostics.append(Diagnostic(
+                                severity=Severity.WARNING,
+                                message=(
+                                    f"'{method}' expects at least {expected_min} "
+                                    f"argument(s), but none were provided."
+                                ),
+                                file=source_path,
+                                line=line,
+                                code=self.code,
+                                source_line=name,
+                            ))
+                        elif expected_min >= 3 and user_args < expected_min / 2:
+                            diagnostics.append(Diagnostic(
+                                severity=Severity.WARNING,
+                                message=(
+                                    f"'{method}' expects at least {expected_min} "
+                                    f"argument(s), but {user_args} were provided."
+                                ),
+                                file=source_path,
+                                line=line,
+                                code=self.code,
+                                source_line=name,
+                            ))
+                    elif not sig.has_varargs and user_args > len(sig.params) + 1:
                         diagnostics.append(Diagnostic(
                             severity=Severity.WARNING,
                             message=(

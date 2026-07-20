@@ -48,7 +48,7 @@ class UnknownAPIRule(LintRule):
                 continue
 
             diagnostics.append(Diagnostic(
-                severity=Severity.WARNING,
+                severity=Severity.ERROR,
                 message=f"Unknown function '{name}' - not found in ESOUI API surface. "
                         f"This may be a typo or a locally-defined function that should use a different naming convention.",
                 file=call["source"],

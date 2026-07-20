@@ -1,6 +1,6 @@
 """Standard Lua built-in globals and functions known to ESO."""
 
-# Standard Lua 5.1 globals (ESO uses Lua 5.1)
+# Standard Lua 5.1 globals
 LUA_BUILTIN_GLOBALS = {
     "_G", "_VERSION", "arg",
     "assert", "collectgarbage", "dofile", "error",
@@ -51,6 +51,15 @@ ESO_ZO_WRAPPERS = {
     "zo_decimalsplit", "zo_abs", "zo_max", "zo_min", "zo_sqrt",
     "zo_pow", "zo_cos", "zo_sin", "zo_tan", "zo_atan2",
     "zo_randomseed", "zo_random", "zo_insecureNext", "zo_insecurePairs",
+}
+
+# ESO-specific global functions (debug, utilities)
+ESO_GLOBALS = {
+    "d", "df",                 # debug print / formatted debug print
+    "zo_strformat",            
+    "zo_iconFormat",           
+    "zo_iconFormatInheritColor",
+    "zo_iconTextFormat",
 }
 
 # Keywords to ignore (control flow, not function calls)
